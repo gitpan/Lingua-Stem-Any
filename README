@@ -2,7 +2,7 @@ NAME
     Lingua::Stem::Any - Unified interface to any stemmer on CPAN
 
 VERSION
-    This document describes Lingua::Stem::Any v0.01.
+    This document describes Lingua::Stem::Any v0.02.
 
 SYNOPSIS
         use Lingua::Stem::Any;
@@ -104,7 +104,8 @@ DESCRIPTION
     stem
         Accepts a list of strings, stems each string, and returns a list of
         stems. The list returned will always have the same number of
-        elements in the same order as the list provided.
+        elements in the same order as the list provided. When no stemming
+        rules apply to a word, the original word is returned.
 
             @stems = $stemmer->stem(@words);
 

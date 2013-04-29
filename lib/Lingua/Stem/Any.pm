@@ -8,7 +8,7 @@ use List::Util qw( first );
 use Unicode::CaseFold qw( fc );
 use Unicode::Normalize qw( NFC );
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 has language => (
     is       => 'rw',
@@ -222,7 +222,7 @@ Lingua::Stem::Any - Unified interface to any stemmer on CPAN
 
 =head1 VERSION
 
-This document describes Lingua::Stem::Any v0.01.
+This document describes Lingua::Stem::Any v0.02.
 
 =head1 SYNOPSIS
 
@@ -339,7 +339,8 @@ casefolding when also enabled.
 
 Accepts a list of strings, stems each string, and returns a list of stems.  The
 list returned will always have the same number of elements in the same order as
-the list provided.
+the list provided.  When no stemming rules apply to a word, the original word is
+returned.
 
     @stems = $stemmer->stem(@words);
 
