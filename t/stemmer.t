@@ -2,7 +2,7 @@ use utf8;
 use strict;
 use warnings;
 use open qw( :encoding(UTF-8) :std );
-use Test::More tests => 186;
+use Test::More tests => 173;
 use Lingua::Stem::Any;
 
 my ($stemmer, @words, @words_copy);
@@ -14,11 +14,17 @@ can_ok $stemmer, qw( stem language languages source );
 is $stemmer->language, 'cs', 'language read-accessor';
 
 my @langs = sort qw(
-    bg cs da de en es fa fi fr gl hu it la nl no pt ro ru sv tr
+    bg cs da de en eo es fa fi fr gl hu io it la nl no pt ro ru sv tr
 );
 my $langs = @langs;
 is_deeply [$stemmer->languages], \@langs, 'list languages';
 is scalar $stemmer->languages,    $langs, 'scalar languages';
+
+for my $lang (@langs) {
+    $stemmer->language($lang);
+    is $stemmer->language, $lang, "change language to $lang";
+}
+
 is_deeply [$stemmer->languages('Lingua::Stem::Snowball')], [qw(
     da de en es fi fr hu it la nl no pt ro ru sv tr
 )], 'list languages for source';
@@ -27,6 +33,7 @@ my @sources = qw(
     Lingua::Stem::Snowball
     Lingua::Stem::UniNE
     Lingua::Stem
+    Lingua::Stem::Patch
 );
 my $sources = @sources;
 is_deeply [$stemmer->sources], \@sources, 'list sources';
@@ -36,6 +43,7 @@ is_deeply [$stemmer->sources('en')], [qw(
 )], 'list sources for language';
 
 @words = @words_copy = qw( že dobře ještě );
+$stemmer->language('cs');
 is_deeply [$stemmer->stem(@words)], [qw( že dobř jesk )], 'list of words';
 is_deeply \@words, \@words_copy, 'not destructive on arrays';
 
@@ -48,6 +56,16 @@ is_deeply [$stemmer->stem('prosím')], ['pro'], 'word in list context';
 is_deeply [$stemmer->stem()],         [],      'empty list in list context';
 is scalar $stemmer->stem('prosím'),   'pro',   'word in scalar context';
 is scalar $stemmer->stem(),           undef,   'empty list in scalar context';
+
+SKIP: {
+    skip 'aggressive attribute NYI', 4;
+
+    ok !$stemmer->aggressive,               'light stemmer by default';
+    is $stemmer->stem('všechno'), 'všechn', 'light stemmer';
+    $stemmer->aggressive(1);
+    ok $stemmer->aggressive,                'aggressive stemmer explicitly set';
+    is $stemmer->stem('všechno'), 'všech',  'aggressive stemmer';
+}
 
 is $stemmer->stem('работа'), 'работа', 'only stem for current language';
 
@@ -70,9 +88,6 @@ like $@, qr/Invalid language ''/, 'undef as language via write-accessor';
 
 eval { Lingua::Stem::Any->new(language => 'xx') };
 like $@, qr/Invalid language 'xx'/, 'invalid language via instantiator';
-
-eval { Lingua::Stem::Any->new() };
-like $@, qr/Missing required arguments: language/, 'instantiator w/o language';
 
 $stemmer = new_ok 'Lingua::Stem::Any', [
     language => 'de',
@@ -123,6 +138,15 @@ $stemmer->source('Lingua::Stem');
 is $stemmer->source, 'Lingua::Stem', 'source explicitly changed';
 is $stemmer->stem('liquidize'), 'liquid', 'American stem with Lingua::Stem';
 is $stemmer->stem('liquidise'), 'liquid', 'Brittish stem with Lingua::Stem';
+
+$stemmer = new_ok 'Lingua::Stem::Any';
+is $stemmer->language, 'en', 'default language is English';
+is $stemmer->stem('fooing'), 'foo', 'default English stemming';
+
+isa_ok $stemmer->language('de'), 'Lingua::Stem::Any';
+is $stemmer->language('cs')->stem('ještě'), 'jesk', 'setter chaining';
+is $stemmer->language('nl')->language, 'nl', 'setter chaining';
+is $stemmer->source('Lingua::Stem')->source, 'Lingua::Stem', 'setter chaining';
 
 my @tests = (
     [qw( bg това тов )],
@@ -176,7 +200,6 @@ for my $test (@tests) {
     my ($language, $word, $stem) = @$test;
 
     $stemmer->language($language);
-    is $stemmer->language, $language, "switch language to $language";
     is $stemmer->stem($word), $stem, "$language: $word stems to $stem";
 
     my @words = ($word) x 2;

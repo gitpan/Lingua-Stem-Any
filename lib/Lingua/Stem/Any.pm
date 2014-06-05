@@ -1,56 +1,87 @@
 package Lingua::Stem::Any;
 
-use v5.6;
+use v5.8.1;
 use utf8;
-use Moo;
 use Carp;
-use List::Util qw( first );
+use List::Util qw( any first );
 use Unicode::CaseFold qw( fc );
 use Unicode::Normalize qw( NFC );
 
-our $VERSION = '0.02';
+use Moo;
+use namespace::clean;
 
-has language => (
+our $VERSION = '0.03';
+
+has _language => (
     is       => 'rw',
     isa      => sub {
         croak "Language is not defined"  unless defined $_[0];
         croak "Invalid language '$_[0]'" unless _is_language($_[0]);
     },
     coerce   => sub { defined $_[0] ? lc $_[0] : '' },
-    trigger  => 1,
-    required => 1,
+    trigger  => \&_trigger_language,
+    default  => 'en',
+    init_arg => 'language',
 );
 
-has source => (
-    is      => 'rw',
-    isa     => sub {
+has _source => (
+    is       => 'rw',
+    isa      => sub {
         croak "Source is not defined"  unless defined $_[0];
         croak "Invalid source '$_[0]'" unless _is_source($_[0]);
     },
-    trigger => 1,
+    trigger  => \&_trigger_source,
+    init_arg => 'source',
 );
 
-has normalize => (
-    is      => 'rw',
-    coerce  => sub { !!$_[0] },
-    default => 1,
+has _cache => (
+    is       => 'rw',
+    coerce   => sub { !!$_[0] },
+    default  => 0,
+    trigger  => \&_trigger_cache,
+    init_arg => 'cache',
 );
 
-has casefold => (
-    is      => 'rw',
-    coerce  => sub { !!$_[0] },
-    default => 1,
+has _exceptions => (
+    is       => 'rw',
+    isa      => sub {
+        croak 'Exceptions must be a hashref'
+            if ref $_[0] ne 'HASH';
+        croak 'Exceptions must only include hashref values'
+            if any { ref $_ ne 'HASH' } values %{$_[0]};
+    },
+    default  => sub { {} },
+    init_arg => 'exceptions',
+);
+
+has _normalize => (
+    is       => 'rw',
+    coerce   => sub { !!$_[0] },
+    default  => 1,
+    init_arg => 'normalize',
+);
+
+has _casefold => (
+    is       => 'rw',
+    coerce   => sub { !!$_[0] },
+    default  => 1,
+    init_arg => 'casefold',
 );
 
 has _stemmer => (
     is      => 'ro',
     builder => '_build_stemmer',
-    clearer => '_clear_stemmer',
+    clearer => 1,
     lazy    => 1,
 );
 
 has _stemmers => (
     is      => 'ro',
+    default => sub { {} },
+);
+
+has _cache_data => (
+    is      => 'rw',
     default => sub { {} },
 );
 
@@ -74,7 +105,7 @@ my %sources = (
     },
     'Lingua::Stem::UniNE' => {
         languages => {map { $_ => 1 } qw(
-            bg cs fa
+            bg cs de fa
         )},
         builder => sub {
             my $language = shift;
@@ -100,6 +131,20 @@ my %sources = (
             };
         },
     },
+    'Lingua::Stem::Patch' => {
+        languages => {map { $_ => 1 } qw(
+            eo io
+        )},
+        builder => sub {
+            my $language = shift;
+            require Lingua::Stem::Patch;
+            my $stemmer = Lingua::Stem::Patch->new(language => $language);
+            return {
+                stem     => sub { $stemmer->stem(shift) },
+                language => sub { $stemmer->language(shift) },
+            };
+        },
+    },
 );
 
 my %languages = map { %{$_->{languages}} } values %sources;
@@ -108,14 +153,67 @@ my @source_order = qw(
     Lingua::Stem::Snowball
     Lingua::Stem::UniNE
     Lingua::Stem
+    Lingua::Stem::Patch
 );
+
+# functions
 
 sub _is_language { exists $languages{ $_[0] } }
 sub _is_source   { exists $sources{   $_[0] } }
 
+# methods
+
+sub BUILD {
+    my ($self) = @_;
+
+    $self->_trigger_language;
+}
+
+sub language {
+    my $self = shift;
+    return $self->_language unless @_;
+    $self->_language(@_);
+    return $self;
+}
+
+sub source {
+    my $self = shift;
+    return $self->_source unless @_;
+    $self->_source(@_);
+    return $self;
+}
+
+sub cache {
+    my $self = shift;
+    return $self->_cache unless @_;
+    $self->_cache(@_);
+    return $self;
+}
+
+sub exceptions {
+    my $self = shift;
+    return $self->_exceptions unless @_;
+    $self->_exceptions(@_);
+    return $self;
+}
+
+sub normalize {
+    my $self = shift;
+    return $self->_normalize unless @_;
+    $self->_normalize(@_);
+    return $self;
+}
+
+sub casefold {
+    my $self = shift;
+    return $self->_casefold unless @_;
+    $self->_casefold(@_);
+    return $self;
+}
+
 # the stemmer is cleared whenever a language or source is updated
 sub _trigger_language {
-    my $self = shift;
+    my ($self) = @_;
 
     $self->_clear_stemmer;
 
@@ -130,14 +228,14 @@ sub _trigger_language {
 }
 
 sub _trigger_source {
-    my $self = shift;
+    my ($self) = @_;
 
     $self->_clear_stemmer;
 }
 
 # the stemmer is built lazily on first use
 sub _build_stemmer {
-    my $self = shift;
+    my ($self) = @_;
 
     croak sprintf "Invalid source '%s' for language '%s'" => (
         $self->source, $self->language
@@ -154,11 +252,29 @@ sub _build_stemmer {
 
 sub _get_stem {
     my ($self, $word) = @_;
+    my $exceptions = $self->exceptions->{$self->language};
+
+    return $word unless $word;
 
     $word = fc  $word if $self->casefold;
     $word = NFC $word if $self->normalize;
 
-    return $self->_stemmer->{stem}($word);
+    # get from exceptions
+    return $exceptions->{$word}
+        if $exceptions
+        && exists $exceptions->{$word};
+
+    # stem without caching
+    return $self->_stemmer->{stem}($word)
+        unless $self->cache;
+
+    # get from cache
+    return $self->_cache_data->{$self->source}{$self->language}{$word}
+        if exists $self->_cache_data->{$self->source}{$self->language}{$word};
+
+    # stem and add to cache
+    return $self->_cache_data->{$self->source}{$self->language}{$word}
+         = $self->_stemmer->{stem}($word);
 }
 
 sub stem {
@@ -210,6 +326,20 @@ sub sources {
     } @source_order;
 }
 
+sub clear_cache {
+    my ($self) = @_;
+
+    $self->_cache_data( {} );
+}
+
+sub _trigger_cache {
+    my ($self) = @_;
+
+    if ( !$self->cache ) {
+        $self->clear_cache;
+    }
+}
+
 1;
 
 __END__
@@ -222,7 +352,7 @@ Lingua::Stem::Any - Unified interface to any stemmer on CPAN
 
 =head1 VERSION
 
-This document describes Lingua::Stem::Any v0.02.
+This document describes Lingua::Stem::Any v0.03.
 
 =head1 SYNOPSIS
 
@@ -251,6 +381,10 @@ but no source is requested.
 
 =head2 Attributes
 
+All attribute-setting methods can be chained.
+
+    $stem = $stemmer->language($language)->stem($word);
+
 =over
 
 =item language
@@ -263,11 +397,13 @@ The following language codes are currently supported.
     │ Danish     │ da │
     │ Dutch      │ nl │
     │ English    │ en │
+    │ Esperanto  │ eo │
     │ Finnish    │ fi │
     │ French     │ fr │
     │ Galician   │ gl │
     │ German     │ de │
     │ Hungarian  │ hu │
+    │ Ido        │ io │
     │ Italian    │ it │
     │ Latin      │ la │
     │ Norwegian  │ no │
@@ -292,8 +428,9 @@ always returned in lowercase when requested.
     # change language
     $stemmer->language($language);
 
-Country codes such as C<cz> for the Czech Republic are not supported, nor are
-IETF language tags such as C<pt-PT> or C<pt-BR>.
+The default language is C<en> (English). Country codes such as C<cz> for the
+Czech Republic are not supported, nor are IETF language tags such as C<pt-PT> or
+C<pt-BR>.
 
 =item source
 
@@ -302,12 +439,13 @@ The following source modules are currently supported.
     ┌────────────────────────┬──────────────────────────────────────────────┐
     │ Module                 │ Languages                                    │
     ├────────────────────────┼──────────────────────────────────────────────┤
-    │ Lingua::Stem::Snowball │ da nl en fi fr de hu it no pt ro ru es sv tr │
-    │ Lingua::Stem::UniNE    │ bg cs fa                                     │
+    │ Lingua::Stem::Snowball │ da de en es fi fr hu it nl no pt ro ru sv tr │
+    │ Lingua::Stem::UniNE    │ bg cs de fa                                  │
     │ Lingua::Stem           │ da de en fr gl it no pt ru sv                │
+    │ Lingua::Stem::Patch    │ eo io                                        │
     └────────────────────────┴──────────────────────────────────────────────┘
 
-A module name is used to specify the source.  If no source is specified, the
+A module name is used to specify the source. If no source is specified, the
 first available source in the above list with support for the current language
 is used.
 
@@ -317,16 +455,60 @@ is used.
     # change source
     $stemmer->source('Lingua::Stem::UniNE');
 
+=item cache
+
+Boolean value specifying whether to cache the stem for each word. This will
+increase performance when stemming the same word multiple times at the expense
+of increased memory consumption. When enabled, the stems are cached for the life
+of the object or until the L</clear_cache> method is called. The same cache is
+not shared among different languages, sources, or different instances of the
+stemmer object.
+
+=item exceptions
+
+Exceptions may be desired to bypass stemming for specific words and use
+predefined stems. For example, the plural English word C<mice> will not stem to
+the singular word C<mouse> unless it is specified in the exception dictionary.
+Another example is that by default the word C<pants> will stem to C<pant> even
+though stemming is normally not desired in this example. The exception
+dictionary can be provided as a hashref where the keys are language codes and
+the values are hashrefs of exceptions.
+
+    # instantiate stemmer object with exceptions
+    $stemmer = Lingua::Stem::Any->new(
+        language   => 'en',
+        exceptions => {
+            en => {
+                mice  => 'mouse',
+                pants => 'pants',
+            }
+        }
+    );
+
+    # add/change exceptions
+    $stemmer->exceptions(
+        en => {
+            mice  => 'mouse',
+            pants => 'pants',
+        }
+    );
+
+    # alternately...
+    $stemmer->exceptions->{en} = {
+        mice  => 'mouse',
+        pants => 'pants',
+    };
+
 =item casefold
 
 Boolean value specifying whether to apply Unicode casefolding to words before
-stemming them.  This is enabled by default and is performed before normalization
+stemming them. This is enabled by default and is performed before normalization
 when also enabled.
 
 =item normalize
 
 Boolean value specifying whether to apply Unicode NFC normalization to words
-before stemming them.  This is enabled by default and is performed after
+before stemming them. This is enabled by default and is performed after
 casefolding when also enabled.
 
 =back
@@ -337,9 +519,9 @@ casefolding when also enabled.
 
 =item stem
 
-Accepts a list of strings, stems each string, and returns a list of stems.  The
+Accepts a list of strings, stems each string, and returns a list of stems. The
 list returned will always have the same number of elements in the same order as
-the list provided.  When no stemming rules apply to a word, the original word is
+the list provided. When no stemming rules apply to a word, the original word is
 returned.
 
     @stems = $stemmer->stem(@words);
@@ -348,7 +530,7 @@ returned.
     $stem = $stemmer->stem($word);
 
 The words should be provided as character strings and the stems are returned as
-character strings.  Byte strings in arbitrary character encodings are not
+character strings. Byte strings in arbitrary character encodings are not
 supported.
 
 =item stem_in_place
@@ -359,7 +541,7 @@ resulting stems.
     $stemmer->stem_in_place(\@words);
 
 This method is provided for potential optimization when a large array of words
-is to be stemmed.  The return value is not defined.
+is to be stemmed. The return value is not defined.
 
 =item languages
 
@@ -381,36 +563,28 @@ Returns a list of supported source module names.
     # sources that support English
     @sources = $stemmer->sources('en');
 
-=back
+=item clear_cache
 
-=head1 TODO
-
-=over
-
-=item * optional stem caching
-
-=item * custom stemming exceptions
+Clears the stem cache for all languages and sources of this object instance when
+the L</cache> attribute is enabled. Does not affect whether caching is enabled.
 
 =back
 
 =head1 SEE ALSO
 
-L<Lingua::Stem::Snowball>, L<Lingua::Stem::UniNE>, L<Lingua::Stem>
-
-=head1 ACKNOWLEDGEMENTS
-
-This module is brought to you by L<Shutterstock|http://www.shutterstock.com/>
-(L<@ShutterTech|https://twitter.com/ShutterTech>).  Additional open source
-projects from Shutterstock can be found at
-L<code.shutterstock.com|http://code.shutterstock.com/>.
+L<Lingua::Stem::Snowball>, L<Lingua::Stem::UniNE>, L<Lingua::Stem>, L<Lingua::Stem::Patch>
 
 =head1 AUTHOR
 
 Nick Patch <patch@cpan.org>
 
+This project is brought to you by L<Shutterstock|http://www.shutterstock.com/>.
+Additional open source projects from Shutterstock can be found at
+L<code.shutterstock.com|http://code.shutterstock.com/>.
+
 =head1 COPYRIGHT AND LICENSE
 
-© 2013 Nick Patch
+© 2013–2014 Shutterstock, Inc.
 
 This library is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
