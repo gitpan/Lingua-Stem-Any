@@ -84,7 +84,7 @@ eval { $stemmer->language('') };
 like $@, qr/Invalid language ''/, 'empty string as language via write-accessor';
 
 eval { $stemmer->language(undef) };
-like $@, qr/Invalid language ''/, 'undef as language via write-accessor';
+like $@, qr/Language is not defined/, 'undef as language via write-accessor';
 
 eval { Lingua::Stem::Any->new(language => 'xx') };
 like $@, qr/Invalid language 'xx'/, 'invalid language via instantiator';
@@ -143,10 +143,13 @@ $stemmer = new_ok 'Lingua::Stem::Any';
 is $stemmer->language, 'en', 'default language is English';
 is $stemmer->stem('fooing'), 'foo', 'default English stemming';
 
-isa_ok $stemmer->language('de'), 'Lingua::Stem::Any';
-is $stemmer->language('cs')->stem('ještě'), 'jesk', 'setter chaining';
-is $stemmer->language('nl')->language, 'nl', 'setter chaining';
-is $stemmer->source('Lingua::Stem')->source, 'Lingua::Stem', 'setter chaining';
+$stemmer->language('nb');
+is $stemmer->language, 'no', 'Norwegian Bokmål (nb) coerced to Norwegian (no)';
+is $stemmer->stem('være'), 'vær', 'Norwegian (no) stemming after setting Norwegian Bokmål (nb)';
+
+$stemmer->language('nn');
+is $stemmer->language, 'no', 'Norwegian Nynorsk (nn) coerced to Norwegian (no)';
+is $stemmer->stem('være'), 'vær', 'Norwegian (no) stemming after setting Norwegian Nynorsk (nn)';
 
 my @tests = (
     [qw( bg това тов )],

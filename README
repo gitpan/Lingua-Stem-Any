@@ -2,7 +2,7 @@ NAME
     Lingua::Stem::Any - Unified interface to any stemmer on CPAN
 
 VERSION
-    This document describes Lingua::Stem::Any v0.03.
+    This document describes Lingua::Stem::Any v0.04.
 
 SYNOPSIS
         use Lingua::Stem::Any;
@@ -28,10 +28,6 @@ DESCRIPTION
     is requested but no source is requested.
 
   Attributes
-    All attribute-setting methods can be chained.
-
-        $stem = $stemmer->language($language)->stem($word);
-
     language
         The following language codes are currently supported.
 
@@ -72,9 +68,12 @@ DESCRIPTION
             # change language
             $stemmer->language($language);
 
-        The default language is `en' (English). Country codes such as `cz'
-        for the Czech Republic are not supported, nor are IETF language tags
-        such as `pt-PT' or `pt-BR'.
+        The default language is "en" (English). The values "nb" (Norwegian
+        Bokmål) and "nn" (Norwegian Nynorsk) are aliases for "no"
+        (Norwegian). Country codes such as "CZ" for the Czech Republic are
+        not supported, as opposed to "cs" for the Czech language, nor are
+        full IETF language tags or Unicode locale identifiers such as
+        "pt-PT" or "pt-BR".
 
     source
         The following source modules are currently supported.
@@ -103,16 +102,16 @@ DESCRIPTION
         This will increase performance when stemming the same word multiple
         times at the expense of increased memory consumption. When enabled,
         the stems are cached for the life of the object or until the
-        clear_cache method is called. The same cache is not shared among
+        "clear_cache" method is called. The same cache is not shared among
         different languages, sources, or different instances of the stemmer
         object.
 
     exceptions
         Exceptions may be desired to bypass stemming for specific words and
-        use predefined stems. For example, the plural English word `mice'
-        will not stem to the singular word `mouse' unless it is specified in
+        use predefined stems. For example, the plural English word "mice"
+        will not stem to the singular word "mouse" unless it is specified in
         the exception dictionary. Another example is that by default the
-        word `pants' will stem to `pant' even though stemming is normally
+        word "pants" will stem to "pant" even though stemming is normally
         not desired in this example. The exception dictionary can be
         provided as a hashref where the keys are language codes and the
         values are hashrefs of exceptions.
@@ -198,7 +197,7 @@ DESCRIPTION
 
     clear_cache
         Clears the stem cache for all languages and sources of this object
-        instance when the cache attribute is enabled. Does not affect
+        instance when the "cache" attribute is enabled. Does not affect
         whether caching is enabled.
 
 SEE ALSO
@@ -208,8 +207,10 @@ SEE ALSO
 AUTHOR
     Nick Patch <patch@cpan.org>
 
-    This project is brought to you by Shutterstock. Additional open source
-    projects from Shutterstock can be found at code.shutterstock.com.
+    This project is brought to you by Shutterstock
+    <http://www.shutterstock.com/>. Additional open source projects from
+    Shutterstock can be found at code.shutterstock.com
+    <http://code.shutterstock.com/>.
 
 COPYRIGHT AND LICENSE
     © 2013–2014 Shutterstock, Inc.

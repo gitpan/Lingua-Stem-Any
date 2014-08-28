@@ -10,62 +10,61 @@ use Unicode::Normalize qw( NFC );
 use Moo;
 use namespace::clean;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
-has _language => (
-    is       => 'rw',
-    isa      => sub {
+my %language_alias = (
+    nb => 'no',
+    nn => 'no',
+);
+
+has language => (
+    is      => 'rw',
+    isa     => sub {
         croak "Language is not defined"  unless defined $_[0];
         croak "Invalid language '$_[0]'" unless _is_language($_[0]);
     },
-    coerce   => sub { defined $_[0] ? lc $_[0] : '' },
-    trigger  => \&_trigger_language,
-    default  => 'en',
-    init_arg => 'language',
+    coerce  => sub { $_[0] && ($language_alias{lc $_[0]} || lc $_[0]) },
+    trigger => 1,
+    default => 'en',
 );
 
-has _source => (
-    is       => 'rw',
-    isa      => sub {
+has source => (
+    is      => 'rw',
+    isa     => sub {
         croak "Source is not defined"  unless defined $_[0];
         croak "Invalid source '$_[0]'" unless _is_source($_[0]);
     },
-    trigger  => \&_trigger_source,
-    init_arg => 'source',
+    trigger => 1,
 );
 
-has _cache => (
-    is       => 'rw',
-    coerce   => sub { !!$_[0] },
-    default  => 0,
-    trigger  => \&_trigger_cache,
-    init_arg => 'cache',
+has cache => (
+    is      => 'rw',
+    coerce  => sub { !!$_[0] },
+    default => 0,
+    trigger => 1,
 );
 
-has _exceptions => (
-    is       => 'rw',
-    isa      => sub {
+has exceptions => (
+    is      => 'rw',
+    isa     => sub {
         croak 'Exceptions must be a hashref'
             if ref $_[0] ne 'HASH';
         croak 'Exceptions must only include hashref values'
             if any { ref $_ ne 'HASH' } values %{$_[0]};
     },
-    default  => sub { {} },
-    init_arg => 'exceptions',
+    default => sub { {} },
 );
 
-has _normalize => (
-    is       => 'rw',
-    coerce   => sub { !!$_[0] },
-    default  => 1,
-    init_arg => 'normalize',
+has normalize => (
+    is      => 'rw',
+    coerce  => sub { !!$_[0] },
+    default => 1,
 );
 
-has _casefold => (
-    is       => 'rw',
-    coerce   => sub { !!$_[0] },
-    default  => 1,
-    init_arg => 'casefold',
+has casefold => (
+    is      => 'rw',
+    coerce  => sub { !!$_[0] },
+    default => 1,
 );
 
 has _stemmer => (
@@ -167,48 +166,6 @@ sub BUILD {
     my ($self) = @_;
 
     $self->_trigger_language;
-}
-
-sub language {
-    my $self = shift;
-    return $self->_language unless @_;
-    $self->_language(@_);
-    return $self;
-}
-
-sub source {
-    my $self = shift;
-    return $self->_source unless @_;
-    $self->_source(@_);
-    return $self;
-}
-
-sub cache {
-    my $self = shift;
-    return $self->_cache unless @_;
-    $self->_cache(@_);
-    return $self;
-}
-
-sub exceptions {
-    my $self = shift;
-    return $self->_exceptions unless @_;
-    $self->_exceptions(@_);
-    return $self;
-}
-
-sub normalize {
-    my $self = shift;
-    return $self->_normalize unless @_;
-    $self->_normalize(@_);
-    return $self;
-}
-
-sub casefold {
-    my $self = shift;
-    return $self->_casefold unless @_;
-    $self->_casefold(@_);
-    return $self;
 }
 
 # the stemmer is cleared whenever a language or source is updated
@@ -352,7 +309,7 @@ Lingua::Stem::Any - Unified interface to any stemmer on CPAN
 
 =head1 VERSION
 
-This document describes Lingua::Stem::Any v0.03.
+This document describes Lingua::Stem::Any v0.04.
 
 =head1 SYNOPSIS
 
@@ -380,10 +337,6 @@ It will provide a default available source module when a language is requested
 but no source is requested.
 
 =head2 Attributes
-
-All attribute-setting methods can be chained.
-
-    $stem = $stemmer->language($language)->stem($word);
 
 =over
 
@@ -428,9 +381,11 @@ always returned in lowercase when requested.
     # change language
     $stemmer->language($language);
 
-The default language is C<en> (English). Country codes such as C<cz> for the
-Czech Republic are not supported, nor are IETF language tags such as C<pt-PT> or
-C<pt-BR>.
+The default language is C<en> (English). The values C<nb> (Norwegian Bokmål)
+and C<nn> (Norwegian Nynorsk) are aliases for C<no> (Norwegian). Country codes
+such as C<CZ> for the Czech Republic are not supported, as opposed to C<cs> for
+the Czech language, nor are full IETF language tags or Unicode locale
+identifiers such as C<pt-PT> or C<pt-BR>.
 
 =item source
 

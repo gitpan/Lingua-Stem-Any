@@ -4,7 +4,7 @@
       "Nick Patch <patch@cpan.org>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "Module::Build version 0.4205",
+   "generated_by" : "Module::Build version 0.4208",
    "license" : [
       "perl_5"
    ],
@@ -34,7 +34,7 @@
             "Lingua::Stem" : "0.80",
             "Lingua::Stem::Patch" : "0.01",
             "Lingua::Stem::Snowball" : "0.95",
-            "Lingua::Stem::UniNE" : "0.07",
+            "Lingua::Stem::UniNE" : "0.08",
             "List::Util" : "1.33",
             "Moo" : "1.001000",
             "Unicode::CaseFold" : "0",
@@ -50,7 +50,7 @@
    "provides" : {
       "Lingua::Stem::Any" : {
          "file" : "lib/Lingua/Stem/Any.pm",
-         "version" : "0.03"
+         "version" : "0.04"
       }
    },
    "release_status" : "stable",
@@ -66,5 +66,5 @@
          "url" : "git://github.com/patch/lingua-stem-any-pm5.git"
       }
    },
-   "version" : "0.03"
+   "version" : "0.04"
 }
