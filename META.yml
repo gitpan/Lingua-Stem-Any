@@ -11,7 +11,7 @@ configure_requires:
   Module::Build: '0.3622'
   Software::License: '0'
 dynamic_config: 1
-generated_by: 'Module::Build version 0.4208, CPAN::Meta::Converter version 2.142060'
+generated_by: 'Module::Build version 0.4205, CPAN::Meta::Converter version 2.141520'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -20,11 +20,11 @@ name: Lingua-Stem-Any
 provides:
   Lingua::Stem::Any:
     file: lib/Lingua/Stem/Any.pm
-    version: '0.04'
+    version: '0.05'
 requires:
   Carp: '0'
   Lingua::Stem: '0.80'
-  Lingua::Stem::Patch: '0.01'
+  Lingua::Stem::Patch: '0.04'
   Lingua::Stem::Snowball: '0.95'
   Lingua::Stem::UniNE: '0.08'
   List::Util: '1.33'
@@ -41,4 +41,4 @@ resources:
   homepage: https://github.com/patch/lingua-stem-any-pm5
   license: http://dev.perl.org/licenses/
   repository: git://github.com/patch/lingua-stem-any-pm5.git
-version: '0.04'
+version: '0.05'

@@ -10,7 +10,7 @@ use Unicode::Normalize qw( NFC );
 use Moo;
 use namespace::clean;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 my %language_alias = (
     nb => 'no',
@@ -132,7 +132,7 @@ my %sources = (
     },
     'Lingua::Stem::Patch' => {
         languages => {map { $_ => 1 } qw(
-            eo io
+            eo io pl
         )},
         builder => sub {
             my $language = shift;
@@ -309,7 +309,7 @@ Lingua::Stem::Any - Unified interface to any stemmer on CPAN
 
 =head1 VERSION
 
-This document describes Lingua::Stem::Any v0.04.
+This document describes Lingua::Stem::Any v0.05.
 
 =head1 SYNOPSIS
 
@@ -361,6 +361,7 @@ The following language codes are currently supported.
     │ Latin      │ la │
     │ Norwegian  │ no │
     │ Persian    │ fa │
+    │ Polish     │ pl │
     │ Portuguese │ pt │
     │ Romanian   │ ro │
     │ Russian    │ ru │
@@ -397,7 +398,7 @@ The following source modules are currently supported.
     │ Lingua::Stem::Snowball │ da de en es fi fr hu it nl no pt ro ru sv tr │
     │ Lingua::Stem::UniNE    │ bg cs de fa                                  │
     │ Lingua::Stem           │ da de en fr gl it no pt ru sv                │
-    │ Lingua::Stem::Patch    │ eo io                                        │
+    │ Lingua::Stem::Patch    │ eo io pl                                     │
     └────────────────────────┴──────────────────────────────────────────────┘
 
 A module name is used to specify the source. If no source is specified, the
